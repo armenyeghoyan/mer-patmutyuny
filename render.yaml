@@ -1,5 +1,33 @@
+# Render Blueprint for the Django version of the site.
+# The app code is packed in app.tar.xz and unpacked during the build.
 services:
   - type: web
-    name: mer-patmutyuny
-    runtime: static
-    staticPublishPath: .
+    name: mer-patmutyuny-django
+    runtime: python
+    plan: free
+    buildCommand: >-
+      python -m tarfile -e app.tar.xz . &&
+      cd merpatmutyuny &&
+      pip install -r requirements.txt &&
+      python manage.py collectstatic --noinput &&
+      python manage.py migrate --noinput &&
+      python manage.py seed_initial &&
+      python manage.py ensure_admin
+    startCommand: cd merpatmutyuny && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: DJANGO_DEBUG
+        value: "0"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_ALLOWED_HOSTS
+        value: .onrender.com
+      - key: DJANGO_CSRF_TRUSTED_ORIGINS
+        value: https://*.onrender.com
+      - key: YOUTUBE_IMPORT_STATUS
+        value: review
+      - key: DJANGO_ADMIN_USER
+        value: editor
+      - key: DJANGO_ADMIN_PASSWORD
+        sync: false
